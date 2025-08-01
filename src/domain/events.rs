@@ -141,6 +141,52 @@ pub enum NetworkEvent {
         /// Previous failure reason
         previous_failure: String,
     },
+    
+    /// Router interface added
+    RouterInterfaceAdded {
+        /// Event metadata with mandatory correlation/causation
+        metadata: EventMetadata,
+        /// Router identifier
+        router_id: RouterId,
+        /// Interface configuration
+        interface: Interface,
+    },
+    
+    /// Router OSPF configured
+    RouterOspfConfigured {
+        /// Event metadata with mandatory correlation/causation
+        metadata: EventMetadata,
+        /// Router identifier
+        router_id: RouterId,
+        /// OSPF process ID
+        process_id: u32,
+        /// Number of areas
+        areas: u32,
+    },
+    
+    /// Router BGP configured
+    RouterBgpConfigured {
+        /// Event metadata with mandatory correlation/causation
+        metadata: EventMetadata,
+        /// Router identifier
+        router_id: RouterId,
+        /// Local AS number
+        local_as: u32,
+        /// Number of neighbors
+        neighbors: u32,
+    },
+    
+    /// Router access list added
+    RouterAccessListAdded {
+        /// Event metadata with mandatory correlation/causation
+        metadata: EventMetadata,
+        /// Router identifier
+        router_id: RouterId,
+        /// ACL number
+        acl_number: u16,
+        /// Number of entries
+        entries: u32,
+    },
 }
 
 impl NetworkEvent {
