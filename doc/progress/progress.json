@@ -1,7 +1,7 @@
 {
   "module": "cim-network",
   "status": "IN_PROGRESS",
-  "overall_completion": 15,
+  "overall_completion": 25,
   "last_updated": "2025-07-31",
   "current_phase": "IMPLEMENTED",
   "phases": {
@@ -23,7 +23,7 @@
     },
     "IMPLEMENTED": {
       "status": "IN_PROGRESS",
-      "completion": 15,
+      "completion": 25,
       "components": {
         "value_objects": {
           "status": "COMPLETE",
@@ -31,6 +31,14 @@
             "src/domain/value_objects.rs"
           ],
           "tests": 8,
+          "coverage": 100
+        },
+        "events": {
+          "status": "COMPLETE",
+          "files": [
+            "src/domain/events.rs"
+          ],
+          "tests": 7,
           "coverage": 100
         },
         "aggregates": {
@@ -56,10 +64,10 @@
     "TESTED": {
       "status": "IN_PROGRESS",
       "metrics": {
-        "total_tests": 8,
-        "passing_tests": 8,
+        "total_tests": 15,
+        "passing_tests": 15,
         "failing_tests": 0,
-        "coverage_percent": 10
+        "coverage_percent": 20
       }
     },
     "COMPLETE": {
@@ -76,5 +84,5 @@
     "Add Cisco IOS configuration generator",
     "Write state machine transition tests"
   ],
-  "git_commit": "47e022d"
+  "git_commit": "0ad5f90"
 }
