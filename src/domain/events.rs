@@ -187,6 +187,58 @@ pub enum NetworkEvent {
         /// Number of entries
         entries: u32,
     },
+    
+    /// Switch port configured
+    SwitchPortConfigured {
+        /// Event metadata with mandatory correlation/causation
+        metadata: EventMetadata,
+        /// Switch identifier
+        switch_id: SwitchId,
+        /// Port number
+        port_number: PortNumber,
+    },
+    
+    /// VLAN assigned to port
+    VlanAssignedToPort {
+        /// Event metadata with mandatory correlation/causation
+        metadata: EventMetadata,
+        /// Switch identifier
+        switch_id: SwitchId,
+        /// Port number
+        port_number: PortNumber,
+        /// VLAN ID
+        vlan_id: VlanId,
+    },
+    
+    /// Spanning tree configured
+    SpanningTreeConfigured {
+        /// Event metadata with mandatory correlation/causation
+        metadata: EventMetadata,
+        /// Switch identifier
+        switch_id: SwitchId,
+    },
+    
+    /// MAC address learned
+    MacAddressLearned {
+        /// Event metadata with mandatory correlation/causation
+        metadata: EventMetadata,
+        /// Switch identifier
+        switch_id: SwitchId,
+        /// MAC address
+        mac_address: MacAddress,
+        /// Port where learned
+        port: PortNumber,
+        /// VLAN where learned
+        vlan: VlanId,
+    },
+    
+    /// Switch stack configured
+    SwitchStackConfigured {
+        /// Event metadata with mandatory correlation/causation
+        metadata: EventMetadata,
+        /// Switch identifier
+        switch_id: SwitchId,
+    },
 }
 
 impl NetworkEvent {

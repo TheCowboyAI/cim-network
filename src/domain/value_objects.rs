@@ -284,3 +284,22 @@ impl From<ContainerNetworkId> for AggregateId {
     }
 }
 
+/// Port speed
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum PortSpeed {
+    /// 10 Mbps
+    TenMegabit,
+    /// 100 Mbps
+    HundredMegabit,
+    /// 1 Gbps
+    Gigabit,
+    /// 10 Gbps
+    TenGigabit,
+    /// 25 Gbps
+    TwentyFiveGigabit,
+    /// 40 Gbps
+    FortyGigabit,
+    /// 100 Gbps
+    HundredGigabit,
+}
+
