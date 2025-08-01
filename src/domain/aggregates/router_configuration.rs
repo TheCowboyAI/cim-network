@@ -232,6 +232,11 @@ impl RouterConfiguration {
         &self.access_lists
     }
     
+    /// Get vendor
+    pub fn vendor(&self) -> &RouterVendor {
+        &self.vendor
+    }
+    
     /// Add an interface
     pub fn add_interface(
         &mut self,

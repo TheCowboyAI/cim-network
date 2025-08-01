@@ -2,6 +2,7 @@
 
 pub mod aggregates;
 pub mod commands;
+pub mod configuration;
 pub mod errors;
 pub mod events;
 pub mod state_machines;

@@ -3,6 +3,7 @@
 mod events_test;
 mod state_machine_test;
 mod router_aggregate_test;
+mod cisco_ios_generator_test;
 
 // Tests for value objects - WRITTEN FIRST (TDD)
 

@@ -303,11 +303,13 @@ pub enum RouterVendor {
 }
 
 /// Cisco operating systems
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum CiscoOs {
     /// IOS 15.7
     Ios15_7,
-    /// IOS XE
+    /// IOS XE 17.3
+    IosXe17_3,
+    /// IOS XE (other versions)
     IosXe(String),
     /// NX-OS
     NxOs(String),
