@@ -264,6 +264,11 @@ impl AggregateId {
     pub fn new() -> Self {
         Self(Uuid::new_v4().to_string())
     }
+    
+    /// Convert to UUID
+    pub fn to_uuid(&self) -> Uuid {
+        Uuid::parse_str(&self.0).unwrap_or_else(|_| Uuid::new_v4())
+    }
 }
 
 impl From<RouterId> for AggregateId {

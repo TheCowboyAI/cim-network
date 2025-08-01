@@ -1,12 +1,14 @@
 //! Domain events for network infrastructure
 //! 
 //! All events MUST have correlation_id and causation_id (NEVER optional)
+//! Extends cim-domain's DomainEvent trait for proper integration.
 
 use super::value_objects::*;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::net::IpAddr;
 use ipnetwork::IpNetwork;
+use cim_domain::DomainEvent;
 
 /// Event metadata - ALL fields are MANDATORY
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -565,5 +567,85 @@ impl NetworkEventBuilder {
             self.correlation_id.expect("correlation_id is mandatory"),
             self.causation_id.expect("causation_id is mandatory"),
         )
+    }
+}
+
+/// Implementation of cim-domain's DomainEvent trait for NetworkEvent
+impl DomainEvent for NetworkEvent {
+    fn subject(&self) -> String {
+        // Follow NATS subject convention: domain.aggregate.event.version
+        match self {
+            NetworkEvent::RouterAdded { .. } => "network.router.added.v1".to_string(),
+            NetworkEvent::RouterConfigurationApplied { .. } => "network.router.configuration_applied.v1".to_string(),
+            NetworkEvent::VlanCreated { .. } => "network.switch.vlan_created.v1".to_string(),
+            NetworkEvent::ContainerNetworkCreated { .. } => "network.container.network_created.v1".to_string(),
+            NetworkEvent::RouterProvisioningStarted { .. } => "network.router.provisioning_started.v1".to_string(),
+            NetworkEvent::RouterProvisioningCompleted { .. } => "network.router.provisioning_completed.v1".to_string(),
+            NetworkEvent::RouterConfigurationFailed { .. } => "network.router.configuration_failed.v1".to_string(),
+            NetworkEvent::RouterMaintenanceScheduled { .. } => "network.router.maintenance_scheduled.v1".to_string(),
+            NetworkEvent::RouterConfigurationRetryStarted { .. } => "network.router.configuration_retry_started.v1".to_string(),
+            NetworkEvent::RouterInterfaceAdded { .. } => "network.router.interface_added.v1".to_string(),
+            NetworkEvent::RouterOspfConfigured { .. } => "network.router.ospf_configured.v1".to_string(),
+            NetworkEvent::RouterBgpConfigured { .. } => "network.router.bgp_configured.v1".to_string(),
+            NetworkEvent::RouterAccessListAdded { .. } => "network.router.access_list_added.v1".to_string(),
+            NetworkEvent::SwitchPortConfigured { .. } => "network.switch.port_configured.v1".to_string(),
+            NetworkEvent::VlanAssignedToPort { .. } => "network.switch.vlan_assigned_to_port.v1".to_string(),
+            NetworkEvent::SpanningTreeConfigured { .. } => "network.switch.spanning_tree_configured.v1".to_string(),
+            NetworkEvent::MacAddressLearned { .. } => "network.switch.mac_address_learned.v1".to_string(),
+            NetworkEvent::SwitchStackConfigured { .. } => "network.switch.stack_configured.v1".to_string(),
+        }
+    }
+
+    fn aggregate_id(&self) -> uuid::Uuid {
+        // Extract aggregate ID from the event metadata
+        match self {
+            NetworkEvent::RouterAdded { metadata, .. } |
+            NetworkEvent::RouterConfigurationApplied { metadata, .. } |
+            NetworkEvent::VlanCreated { metadata, .. } |
+            NetworkEvent::ContainerNetworkCreated { metadata, .. } |
+            NetworkEvent::RouterProvisioningStarted { metadata, .. } |
+            NetworkEvent::RouterProvisioningCompleted { metadata, .. } |
+            NetworkEvent::RouterConfigurationFailed { metadata, .. } |
+            NetworkEvent::RouterMaintenanceScheduled { metadata, .. } |
+            NetworkEvent::RouterConfigurationRetryStarted { metadata, .. } |
+            NetworkEvent::RouterInterfaceAdded { metadata, .. } |
+            NetworkEvent::RouterOspfConfigured { metadata, .. } |
+            NetworkEvent::RouterBgpConfigured { metadata, .. } |
+            NetworkEvent::RouterAccessListAdded { metadata, .. } |
+            NetworkEvent::SwitchPortConfigured { metadata, .. } |
+            NetworkEvent::VlanAssignedToPort { metadata, .. } |
+            NetworkEvent::SpanningTreeConfigured { metadata, .. } |
+            NetworkEvent::MacAddressLearned { metadata, .. } |
+            NetworkEvent::SwitchStackConfigured { metadata, .. } => {
+                metadata.aggregate_id.to_uuid()
+            }
+        }
+    }
+
+    fn event_type(&self) -> &'static str {
+        match self {
+            NetworkEvent::RouterAdded { .. } => "RouterAdded",
+            NetworkEvent::RouterConfigurationApplied { .. } => "RouterConfigurationApplied",
+            NetworkEvent::VlanCreated { .. } => "VlanCreated",
+            NetworkEvent::ContainerNetworkCreated { .. } => "ContainerNetworkCreated",
+            NetworkEvent::RouterProvisioningStarted { .. } => "RouterProvisioningStarted",
+            NetworkEvent::RouterProvisioningCompleted { .. } => "RouterProvisioningCompleted",
+            NetworkEvent::RouterConfigurationFailed { .. } => "RouterConfigurationFailed",
+            NetworkEvent::RouterMaintenanceScheduled { .. } => "RouterMaintenanceScheduled",
+            NetworkEvent::RouterConfigurationRetryStarted { .. } => "RouterConfigurationRetryStarted",
+            NetworkEvent::RouterInterfaceAdded { .. } => "RouterInterfaceAdded",
+            NetworkEvent::RouterOspfConfigured { .. } => "RouterOspfConfigured",
+            NetworkEvent::RouterBgpConfigured { .. } => "RouterBgpConfigured",
+            NetworkEvent::RouterAccessListAdded { .. } => "RouterAccessListAdded",
+            NetworkEvent::SwitchPortConfigured { .. } => "SwitchPortConfigured",
+            NetworkEvent::VlanAssignedToPort { .. } => "VlanAssignedToPort",
+            NetworkEvent::SpanningTreeConfigured { .. } => "SpanningTreeConfigured",
+            NetworkEvent::MacAddressLearned { .. } => "MacAddressLearned",
+            NetworkEvent::SwitchStackConfigured { .. } => "SwitchStackConfigured",
+        }
+    }
+
+    fn version(&self) -> &'static str {
+        "v1"
     }
 }

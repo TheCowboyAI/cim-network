@@ -10,6 +10,9 @@ keywords = ["cim", "network", "infrastructure", "event-sourcing", "ddd"]
 categories = ["network-programming", "data-structures"]
 
 [dependencies]
+# Core CIM domain foundation - THIS IS CRITICAL
+cim-domain = { git = "https://github.com/thecowboyai/cim-domain.git", branch = "main" }
+
 # Core dependencies
 async-trait = "0.1"
 tokio = { version = "1", features = ["full"] }
