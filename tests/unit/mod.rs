@@ -1,6 +1,7 @@
 //! Unit tests module
 
 mod events_test;
+mod state_machine_test;
 
 // Tests for value objects - WRITTEN FIRST (TDD)
 

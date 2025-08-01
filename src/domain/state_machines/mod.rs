@@ -1,3 +1,5 @@
-//! State machines
+//! State machines with phantom types for compile-time safety
 
-// State machines will be added as we implement them
+pub mod router;
+pub mod switch;
+pub mod network;

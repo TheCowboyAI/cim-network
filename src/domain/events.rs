@@ -93,6 +93,54 @@ pub enum NetworkEvent {
         /// Subnet for the container network
         subnet: IpNetwork,
     },
+    
+    /// Router provisioning started
+    RouterProvisioningStarted {
+        /// Event metadata with mandatory correlation/causation
+        metadata: EventMetadata,
+        /// Router identifier
+        router_id: RouterId,
+        /// Router vendor and OS
+        vendor: RouterVendor,
+    },
+    
+    /// Router provisioning completed
+    RouterProvisioningCompleted {
+        /// Event metadata with mandatory correlation/causation
+        metadata: EventMetadata,
+        /// Router identifier
+        router_id: RouterId,
+    },
+    
+    /// Router configuration failed
+    RouterConfigurationFailed {
+        /// Event metadata with mandatory correlation/causation
+        metadata: EventMetadata,
+        /// Router identifier
+        router_id: RouterId,
+        /// Failure reason
+        reason: String,
+    },
+    
+    /// Router maintenance scheduled
+    RouterMaintenanceScheduled {
+        /// Event metadata with mandatory correlation/causation
+        metadata: EventMetadata,
+        /// Router identifier
+        router_id: RouterId,
+        /// Maintenance window
+        window: MaintenanceWindow,
+    },
+    
+    /// Router configuration retry started
+    RouterConfigurationRetryStarted {
+        /// Event metadata with mandatory correlation/causation
+        metadata: EventMetadata,
+        /// Router identifier
+        router_id: RouterId,
+        /// Previous failure reason
+        previous_failure: String,
+    },
 }
 
 impl NetworkEvent {
@@ -350,6 +398,17 @@ pub enum ManagementProtocol {
     Netconf,
     /// REST API
     RestApi,
+}
+
+/// Maintenance window
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MaintenanceWindow {
+    /// Start time
+    pub start: DateTime<Utc>,
+    /// End time
+    pub end: DateTime<Utc>,
+    /// Reason for maintenance
+    pub reason: String,
 }
 
 /// VLAN configuration
