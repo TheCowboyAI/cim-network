@@ -19,6 +19,9 @@ pub use domain::{
     NetworkId, RouterId, SwitchId, VlanId, ContainerNetworkId,
     NetworkEvent, NetworkCommand,
     NetworkError,
+    // Export event-related types for tests
+    EventMetadata, CorrelationId, CausationId, AggregateId,
+    RouterVendor, CiscoOs, DeploymentMethod,
 };
 
 pub use application::NetworkService;

@@ -7,6 +7,7 @@ pub mod events;
 pub mod state_machines;
 pub mod value_objects;
 
+// Re-export commonly used types
 pub use commands::*;
 pub use errors::*;
 pub use events::*;

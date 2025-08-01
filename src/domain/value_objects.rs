@@ -187,6 +187,12 @@ impl CausationId {
     }
 }
 
+impl fmt::Display for CausationId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
 /// Event ID
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct EventId(String);
@@ -195,6 +201,12 @@ impl EventId {
     /// Create a new event ID
     pub fn new() -> Self {
         Self(Uuid::new_v4().to_string())
+    }
+}
+
+impl fmt::Display for EventId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
     }
 }
 
@@ -240,5 +252,34 @@ impl PortNumber {
     /// Get the inner value
     pub fn value(&self) -> u32 {
         self.0
+    }
+}
+
+/// Aggregate identifier
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct AggregateId(String);
+
+impl AggregateId {
+    /// Create a new aggregate ID
+    pub fn new() -> Self {
+        Self(Uuid::new_v4().to_string())
+    }
+}
+
+impl From<RouterId> for AggregateId {
+    fn from(id: RouterId) -> Self {
+        Self(id.to_string())
+    }
+}
+
+impl From<SwitchId> for AggregateId {
+    fn from(id: SwitchId) -> Self {
+        Self(id.to_string())
+    }
+}
+
+impl From<ContainerNetworkId> for AggregateId {
+    fn from(id: ContainerNetworkId) -> Self {
+        Self(id.to_string())
     }
 }

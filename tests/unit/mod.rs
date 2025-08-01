@@ -1,4 +1,8 @@
-//! Tests for value objects - WRITTEN FIRST (TDD)
+//! Unit tests module
+
+mod events_test;
+
+// Tests for value objects - WRITTEN FIRST (TDD)
 
 use cim_network::domain::value_objects::*;
 
