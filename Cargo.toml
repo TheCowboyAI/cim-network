@@ -1,0 +1,55 @@
+[package]
+name = "cim-network"
+version = "0.1.0"
+edition = "2021"
+authors = ["TheCowboyAI"]
+description = "Network infrastructure management for CIM"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/TheCowboyAI/cim-network"
+keywords = ["cim", "network", "infrastructure", "event-sourcing", "ddd"]
+categories = ["network-programming", "data-structures"]
+
+[dependencies]
+# Core dependencies
+async-trait = "0.1"
+tokio = { version = "1", features = ["full"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "1"
+uuid = { version = "1", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+
+# Network types
+ipnetwork = "0.20"
+cidr = "0.2"
+
+# Event sourcing
+futures = "0.3"
+async-nats = "0.33"
+bytes = "1"
+
+# Tracing
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Graph algorithms (for context graphs only)
+petgraph = "0.6"
+
+# State machine
+strum = { version = "0.26", features = ["derive"] }
+strum_macros = "0.26"
+
+[dev-dependencies]
+tokio-test = "0.4"
+proptest = "1"
+criterion = { version = "0.5", features = ["html_reports"] }
+once_cell = "1"
+
+[[bench]]
+name = "state_machine_benchmarks"
+harness = false
+
+[features]
+default = []
+mock = []
+integration-tests = []
