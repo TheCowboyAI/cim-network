@@ -1174,7 +1174,7 @@ impl ContextGraphTemplateEngine {
             name: topology.name().to_string(),
             data: serde_json::json!({
                 "type": format!("{:?}", topology.topology_type()),
-                "base_network": topology.base_network().to_string(),
+                "base_network": topology.base_ip().to_string(),
             }),
         };
         self.nodes.push(topology_node);
@@ -1187,7 +1187,7 @@ impl ContextGraphTemplateEngine {
                 name: device.name.clone(),
                 data: serde_json::json!({
                     "device_type": format!("{:?}", device.device_type),
-                    "management_ip": device.management_ip.map(|ip| ip.to_string()).unwrap_or("none".to_string()),
+                    "ip_address": device.ip_address.to_string(),
                 }),
             };
             self.nodes.push(device_node);
@@ -1389,7 +1389,8 @@ impl TemplateEngine for ContextGraphTemplateEngine {
 impl Clone for ContextGraphTemplateEngine {
     fn clone(&self) -> Self {
         Self {
-            context_graph: self.context_graph.clone(),
+            nodes: self.nodes.clone(),
+            edges: self.edges.clone(),
         }
     }
 }
@@ -1448,6 +1449,9 @@ impl ContextGraphTemplateEngine {
             ),
             DeploymentTarget::VM { hypervisor } => format!(
                 "echo 'VM deployment using {}'", hypervisor
+            ),
+            DeploymentTarget::Cloud { provider, region } => format!(
+                "echo 'Cloud deployment to {} in region {}'", provider, region
             ),
         }
     }
@@ -1512,14 +1516,13 @@ impl ContextGraphTemplateEngine {
         let mut interfaces = Vec::new();
         
         // This would ideally query the context graph for device interfaces
-        if let Some(mgmt_ip) = device.management_ip {
-            interfaces.push(format!(
-                r#"      eth0 = {{
+        // Use the device's primary IP address
+        interfaces.push(format!(
+            r#"      eth0 = {{
         ipv4.addresses = [{{ address = "{}"; prefixLength = 24; }}];
       }};"#,
-                mgmt_ip
-            ));
-        }
+            device.ip_address
+        ));
         
         interfaces.join("\n")
     }

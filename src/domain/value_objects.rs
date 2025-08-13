@@ -249,6 +249,16 @@ impl IpNetwork {
     pub fn inner(&self) -> &ipnetwork::IpNetwork {
         &self.0
     }
+    
+    /// Get the network portion
+    pub fn network(&self) -> std::net::IpAddr {
+        self.0.network()
+    }
+    
+    /// Get the prefix length
+    pub fn prefix(&self) -> u8 {
+        self.0.prefix()
+    }
 }
 
 impl fmt::Display for IpNetwork {
@@ -285,7 +295,7 @@ impl PortNumber {
 
 /// Aggregate identifier
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct AggregateId(String);
+pub struct AggregateId(pub String);
 
 impl AggregateId {
     /// Create a new aggregate ID
@@ -313,6 +323,52 @@ impl From<SwitchId> for AggregateId {
 
 impl From<ContainerNetworkId> for AggregateId {
     fn from(id: ContainerNetworkId) -> Self {
+        Self(id.to_string())
+    }
+}
+
+/// Device identifier
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct DeviceId(Uuid);
+
+impl DeviceId {
+    /// Create a new device ID
+    pub fn new() -> Self {
+        Self(Uuid::new_v4())
+    }
+}
+
+impl fmt::Display for DeviceId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl From<DeviceId> for AggregateId {
+    fn from(id: DeviceId) -> Self {
+        Self(id.to_string())
+    }
+}
+
+/// Interface identifier
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct InterfaceId(Uuid);
+
+impl InterfaceId {
+    /// Create a new interface ID
+    pub fn new() -> Self {
+        Self(Uuid::new_v4())
+    }
+}
+
+impl fmt::Display for InterfaceId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl From<InterfaceId> for AggregateId {
+    fn from(id: InterfaceId) -> Self {
         Self(id.to_string())
     }
 }

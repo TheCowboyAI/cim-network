@@ -405,3 +405,11 @@ impl Default for NixTopologyGenerator {
         Self::new()
     }
 }
+
+impl std::fmt::Debug for NixTopologyGenerator {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("NixTopologyGenerator")
+            .field("current_topology_id", &self.current_topology_id)
+            .finish()
+    }
+}

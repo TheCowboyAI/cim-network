@@ -1,6 +1,6 @@
 //! Network topology aggregate - orchestrates complete network infrastructure
 
-use crate::domain::{NetworkId, ConnectionId, VlanId, IpNetwork, CorrelationId, CausationId, EventId};
+use crate::domain::{NetworkId, ConnectionId, VlanId, IpNetwork, CorrelationId, CausationId, EventId, DeviceId, InterfaceId};
 use crate::domain::events::{NetworkEvent, EventMetadata};
 use crate::domain::errors::NetworkError;
 use chrono::{DateTime, Utc};
@@ -9,6 +9,7 @@ use std::net::IpAddr;
 use serde::{Serialize, Deserialize};
 
 /// Network topology aggregate root - manages complete network infrastructure
+#[derive(Debug, Clone)]
 pub struct NetworkTopology {
     id: NetworkTopologyId,
     name: String,
@@ -377,21 +378,21 @@ impl NetworkTopology {
     
     /// Generate the network topology based on the topology type
     fn generate_topology(&mut self) -> Result<(), NetworkError> {
-        match &self.topology_type {
+        match self.topology_type.clone() {
             TopologyType::SingleRouter { interface_count } => {
-                self.generate_single_router_topology(*interface_count)?;
+                self.generate_single_router_topology(interface_count)?;
             }
             TopologyType::RouterSwitch { switch_count, ports_per_switch } => {
-                self.generate_router_switch_topology(*switch_count, *ports_per_switch)?;
+                self.generate_router_switch_topology(switch_count, ports_per_switch)?;
             }
             TopologyType::ThreeTier { core_count, distribution_count, access_count, hosts_per_access } => {
-                self.generate_three_tier_topology(*core_count, *distribution_count, *access_count, *hosts_per_access)?;
+                self.generate_three_tier_topology(core_count, distribution_count, access_count, hosts_per_access)?;
             }
             TopologyType::SpineLeaf { spine_count, leaf_count, hosts_per_leaf } => {
-                self.generate_spine_leaf_topology(*spine_count, *leaf_count, *hosts_per_leaf)?;
+                self.generate_spine_leaf_topology(spine_count, leaf_count, hosts_per_leaf)?;
             }
             TopologyType::Custom(spec) => {
-                self.generate_custom_topology(spec)?;
+                self.generate_custom_topology(&spec)?;
             }
         }
         
@@ -694,7 +695,7 @@ impl NetworkTopology {
     // Getters
     pub fn id(&self) -> NetworkTopologyId { self.id }
     pub fn name(&self) -> &str { &self.name }
-    pub fn base_ip(&self) -> IpNetwork { self.base_ip }
+    pub fn base_ip(&self) -> &IpNetwork { &self.base_ip }
     pub fn topology_type(&self) -> &TopologyType { &self.topology_type }
     pub fn devices(&self) -> &HashMap<DeviceId, NetworkDevice> { &self.devices }
     pub fn connections(&self) -> &[NetworkConnection] { &self.connections }

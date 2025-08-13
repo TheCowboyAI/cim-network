@@ -18,6 +18,7 @@ pub mod application;
 pub mod projections;
 pub mod nix_integration;
 pub mod sdn;
+pub mod visualization;
 
 pub use domain::{
     NetworkId, RouterId, SwitchId, VlanId, ContainerNetworkId,

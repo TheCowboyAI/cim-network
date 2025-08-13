@@ -2,9 +2,6 @@
 
 use crate::domain::{IpNetwork, NetworkError};
 use crate::domain::aggregates::network_topology::{NetworkTopology, TopologyType};
-use crate::domain::workflows::nix_deployment::{
-    NetworkDeploymentOptions, NetworkDeploymentResult, NixDeploymentError
-};
 use crate::infrastructure::nix::{
     NixTopologyGenerator, NixTopologyGenerationRequest, NixGenerationOptions,
     ContextGraphTemplateEngine, SimpleFileWriter, SimpleNixFormatter, DeploymentTarget
@@ -258,6 +255,9 @@ pub enum NetworkDeploymentError {
     #[error("Network error: {0}")]
     Network(#[from] NetworkError),
 }
+
+/// Alias for workflow compatibility
+pub type NixDeploymentError = NetworkDeploymentError;
 
 /// CLI-like interface for simple usage
 pub async fn deploy_network_simple(ip: &str, name: &str) -> Result<(), Box<dyn std::error::Error>> {
