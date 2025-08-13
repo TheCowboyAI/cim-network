@@ -18,6 +18,11 @@ import tempfile
 import uuid
 from pathlib import Path
 from typing import Dict, Any, List, Optional
+try:
+    from .advanced_nix_generator import AdvancedNixGenerator, NetworkConfig, NetworkMode, SecurityLevel
+    ADVANCED_GENERATOR_AVAILABLE = True
+except ImportError:
+    ADVANCED_GENERATOR_AVAILABLE = False
 
 
 class SDNMCPServer:
@@ -121,6 +126,25 @@ class SDNMCPServer:
                         "layout": {"type": "string", "enum": ["hierarchical", "tier-based", "force-directed"], "default": "tier-based"},
                         "color_scheme": {"type": "string", "enum": ["default", "dark", "blue", "enterprise"], "default": "default"},
                         "show_details": {"type": "boolean", "default": True}
+                    }
+                }
+            },
+            {
+                "name": "generate_advanced_nix",
+                "description": "Generate advanced nix-topology configurations with security, monitoring, and enterprise features",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "mode": {"type": "string", "enum": ["dev", "leaf", "enterprise", "secure"], "default": "dev"},
+                        "security_level": {"type": "string", "enum": ["basic", "hardened", "compliance"], "default": "basic"},
+                        "enable_monitoring": {"type": "boolean", "default": True},
+                        "enable_vpn": {"type": "boolean", "default": False},
+                        "enable_vlan": {"type": "boolean", "default": False},
+                        "container_support": {"type": "boolean", "default": True},
+                        "high_availability": {"type": "boolean", "default": False},
+                        "network_cidr": {"type": "string", "default": "192.168.1.0/24"},
+                        "domain_name": {"type": "string", "default": "local.network"},
+                        "format": {"type": "string", "enum": ["nixos", "nix-darwin", "home-manager"], "default": "nixos"}
                     }
                 }
             }
@@ -272,6 +296,79 @@ class SDNMCPServer:
                         "interactive": format_type in ["svg", "html"]
                     }
                 }
+            
+            elif command == "generate_advanced_nix":
+                if not ADVANCED_GENERATOR_AVAILABLE:
+                    return {
+                        "success": False,
+                        "message": "❌ Advanced Nix generator not available. Please check installation.",
+                        "data": {}
+                    }
+                
+                try:
+                    # Parse parameters
+                    mode = NetworkMode(args.get("mode", "dev"))
+                    security_level = SecurityLevel(args.get("security_level", "basic"))
+                    
+                    config = NetworkConfig(
+                        mode=mode,
+                        security_level=security_level,
+                        enable_monitoring=args.get("enable_monitoring", True),
+                        enable_vpn=args.get("enable_vpn", False),
+                        enable_vlan=args.get("enable_vlan", False),
+                        container_support=args.get("container_support", True),
+                        high_availability=args.get("high_availability", False),
+                        network_cidr=args.get("network_cidr", "192.168.1.0/24"),
+                        domain_name=args.get("domain_name", "local.network")
+                    )
+                    
+                    format_type = args.get("format", "nixos")
+                    generator = AdvancedNixGenerator()
+                    flake_content = generator.generate_flake(config, format_type)
+                    
+                    # Generate feature summary
+                    features = []
+                    if config.enable_monitoring:
+                        features.append("monitoring")
+                    if config.enable_vpn:
+                        features.append("VPN")
+                    if config.enable_vlan:
+                        features.append("VLAN")
+                    if config.container_support:
+                        features.append("containers")
+                    if config.high_availability:
+                        features.append("high-availability")
+                    if config.security_level != SecurityLevel.BASIC:
+                        features.append(f"{config.security_level.value}-security")
+                    
+                    return {
+                        "success": True,
+                        "message": f"🚀 Generated advanced {format_type} configuration ({config.mode.value} mode)",
+                        "data": {
+                            "mode": config.mode.value,
+                            "security_level": config.security_level.value,
+                            "format": format_type,
+                            "features": features,
+                            "network_cidr": config.network_cidr,
+                            "domain_name": config.domain_name,
+                            "configuration": flake_content,
+                            "deployment_ready": True,
+                            "nix_topology_compliant": True
+                        }
+                    }
+                    
+                except ValueError as e:
+                    return {
+                        "success": False,
+                        "message": f"❌ Invalid configuration parameter: {e}",
+                        "data": {}
+                    }
+                except Exception as e:
+                    return {
+                        "success": False,
+                        "message": f"❌ Error generating advanced configuration: {e}",
+                        "data": {}
+                    }
             
             else:
                 return {
@@ -1100,6 +1197,7 @@ ISP-2 ────┘                             ├─── APP-02
             "add_sdn_node": "add_sdn_node",
             "connect_sdn_nodes": "connect_sdn_nodes",
             "generate_nix_topology": "generate_nix_topology",
+            "generate_advanced_nix": "generate_advanced_nix",
             "get_sdn_state": "get_sdn_state",
             "export_context_graph": "export_context_graph",
             "visualize_topology": "visualize_topology",

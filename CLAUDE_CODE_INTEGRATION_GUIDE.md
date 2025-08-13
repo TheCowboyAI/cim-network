@@ -36,7 +36,7 @@ You should see: **✅ 100% success rate** with all integration tests passing.
 
 ## 🛠️ Available Tools
 
-The CIM Network MCP server provides **8 specialized tools** for interactive network building:
+The CIM Network MCP server provides **9 specialized tools** for interactive network building:
 
 ### Core Network Tools
 
@@ -157,9 +157,43 @@ Generate visual representations of the network topology.
 }
 ```
 
+#### 7. **generate_advanced_nix** ⭐ NEW
+Generate advanced nix-topology configurations with enterprise features.
+
+```json
+// Development Environment with Monitoring
+{
+  "name": "generate_advanced_nix",
+  "arguments": {
+    "mode": "dev",                 // dev, leaf, enterprise, secure
+    "security_level": "basic",     // basic, hardened, compliance
+    "enable_monitoring": true,     // Prometheus + Grafana
+    "container_support": true,     // Docker + Podman
+    "network_cidr": "192.168.1.0/24",
+    "domain_name": "dev.local"
+  }
+}
+
+// Production Enterprise with All Features
+{
+  "name": "generate_advanced_nix",
+  "arguments": {
+    "mode": "leaf",
+    "security_level": "hardened",
+    "enable_monitoring": true,
+    "enable_vpn": true,            // WireGuard VPN server
+    "enable_vlan": true,           // VLAN segmentation
+    "container_support": true,
+    "high_availability": true,     // Keepalived + BGP
+    "network_cidr": "10.0.1.0/24",
+    "domain_name": "enterprise.local"
+  }
+}
+```
+
 ### State Management Tools
 
-#### 7. **get_sdn_state**
+#### 8. **get_sdn_state**
 Retrieve the current state of the Software Defined Network.
 
 ```json
@@ -169,7 +203,7 @@ Retrieve the current state of the Software Defined Network.
 }
 ```
 
-#### 8. **export_context_graph**
+#### 9. **export_context_graph**
 Export the cim-graph ContextGraph representing the SDN.
 
 ```json
@@ -188,17 +222,15 @@ Export the cim-graph ContextGraph representing the SDN.
 ```bash
 # Ask Claude Code to:
 1. "Create a development network for a 5-person team"
-2. "Add a database server and web server" 
-3. "Generate NixOS configuration for deployment"
+2. "Add monitoring and container support"
+3. "Generate advanced NixOS configuration for deployment"
 4. "Show me an ASCII visualization of the topology"
 ```
 
 Claude Code will use these tools:
 ```json
 create_base_topology(mode="dev", name="team-network", primary_isp="local-isp")
-add_sdn_node(node_id="db-server", node_type="server", services=["postgresql"])
-add_sdn_node(node_id="web-server", node_type="server", services=["nginx"])
-generate_nix_topology(format="nixos", mode="dev")
+generate_advanced_nix(mode="dev", enable_monitoring=true, container_support=true)
 visualize_topology(format="ascii", layout="tier-based")
 ```
 
@@ -207,19 +239,50 @@ visualize_topology(format="ascii", layout="tier-based")
 ```bash
 # Ask Claude Code to:
 1. "Set up a production branch office with high availability"
-2. "Configure dual ISP failover with load balancing" 
-3. "Add application cluster with database replication"
-4. "Generate enterprise network documentation"
+2. "Enable VPN, monitoring, and VLAN segmentation"
+3. "Generate hardened security configuration"
+4. "Create enterprise network documentation"
 ```
 
 Claude Code will use these tools:
 ```json
 create_base_topology(mode="leaf", primary_isp="verizon", failover_isp="comcast")
-add_sdn_node(node_id="app-01", tier="cluster", services=["nginx", "app"])
-add_sdn_node(node_id="db-primary", services=["postgresql", "replication"])
-connect_sdn_nodes(from_node="app-01", to_node="db-primary")
+generate_advanced_nix(
+  mode="leaf", 
+  security_level="hardened",
+  enable_monitoring=true,
+  enable_vpn=true,
+  enable_vlan=true,
+  high_availability=true
+)
 visualize_topology(format="mermaid", color_scheme="enterprise")
 export_context_graph(format="json")
+```
+
+### Advanced Enterprise Network
+
+```bash
+# Ask Claude Code to:
+1. "Create a secure enterprise network with compliance features"
+2. "Set up monitoring, VPN, and container orchestration"
+3. "Generate deployment-ready configurations"
+4. "Provide security hardening documentation"
+```
+
+Claude Code will use these tools:
+```json
+generate_advanced_nix(
+  mode="leaf",
+  security_level="hardened",
+  enable_monitoring=true,
+  enable_vpn=true,
+  enable_vlan=true,
+  container_support=true,
+  high_availability=true,
+  network_cidr="10.100.0.0/24",
+  domain_name="enterprise.corp"
+)
+visualize_topology(format="dot", color_scheme="enterprise")
 ```
 
 ## 🎨 Visualization Formats
