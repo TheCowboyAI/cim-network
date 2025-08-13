@@ -10,11 +10,11 @@ keywords = ["cim", "network", "infrastructure", "event-sourcing", "ddd"]
 categories = ["network-programming", "data-structures"]
 
 [dependencies]
-# Core CIM domain foundation - THIS IS CRITICAL
-cim-domain = { git = "https://github.com/thecowboyai/cim-domain.git", branch = "main" }
-cim-domain-workflow = { path = "./cim-domain-workflow" }
-cim-domain-nix = { path = "./cim-domain-nix" }
-cim-graph = { path = "./cim-graph" }
+# Core CIM domain foundation - using published GitHub packages
+cim-domain = { git = "https://github.com/thecowboyai/cim-domain.git", tag = "v0.3.0" }
+cim-domain-workflow = { git = "https://github.com/thecowboyai/cim-domain-workflow.git", tag = "v0.3.0" }
+cim-domain-nix = { git = "https://github.com/thecowboyai/cim-domain-nix.git", tag = "v0.3.0" }
+cim-graph = { git = "https://github.com/thecowboyai/cim-graph.git", branch = "main" }
 
 # Core dependencies
 async-trait = "0.1"
