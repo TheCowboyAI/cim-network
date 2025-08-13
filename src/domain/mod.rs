@@ -7,6 +7,8 @@ pub mod errors;
 pub mod events;
 pub mod state_machines;
 pub mod value_objects;
+#[cfg(feature = "workflows")]
+pub mod workflows;
 
 // Re-export commonly used types
 pub use commands::*;

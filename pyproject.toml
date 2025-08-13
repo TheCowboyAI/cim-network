@@ -1,0 +1,29 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "cim-network-mcp"
+version = "1.0.0"
+description = "MCP server for interactive network topology building"
+readme = "README.md"
+authors = [
+    {name = "TheCowboyAI"},
+]
+license = {text = "MIT OR Apache-2.0"}
+dependencies = [
+    "mcp>=1.0.0",
+]
+requires-python = ">=3.8"
+
+[project.scripts]
+cim-network-mcp = "cim_network_mcp.server:main"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["cim_network_mcp"]

@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "network-topology-builder": {
+      "command": "python3",
+      "args": ["-m", "cim_network_mcp"],
+      "cwd": "/git/thecowboyai/cim-network",
+      "env": {
+        "PYTHONPATH": "/git/thecowboyai/cim-network"
+      }
+    }
+  }
+}

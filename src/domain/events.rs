@@ -241,6 +241,27 @@ pub enum NetworkEvent {
         /// Switch identifier
         switch_id: SwitchId,
     },
+    
+    /// Nix topology generation events
+    NixTopologyGenerationStarted {
+        /// Event metadata with mandatory correlation/causation
+        metadata: EventMetadata,
+        /// Network topology identifier (simplified)
+        topology_id: String,
+        /// Generation identifier (simplified)
+        generation_id: String,
+    },
+    
+    NixTopologyGenerationCompleted {
+        /// Event metadata with mandatory correlation/causation
+        metadata: EventMetadata,
+        /// Network topology identifier (simplified)
+        topology_id: String,
+        /// Generation identifier (simplified)
+        generation_id: String,
+        /// Number of files generated
+        file_count: u32,
+    },
 }
 
 impl NetworkEvent {
@@ -593,6 +614,8 @@ impl DomainEvent for NetworkEvent {
             NetworkEvent::SpanningTreeConfigured { .. } => "network.switch.spanning_tree_configured.v1".to_string(),
             NetworkEvent::MacAddressLearned { .. } => "network.switch.mac_address_learned.v1".to_string(),
             NetworkEvent::SwitchStackConfigured { .. } => "network.switch.stack_configured.v1".to_string(),
+            NetworkEvent::NixTopologyGenerationStarted { .. } => "network.topology.nix_generation_started.v1".to_string(),
+            NetworkEvent::NixTopologyGenerationCompleted { .. } => "network.topology.nix_generation_completed.v1".to_string(),
         }
     }
 
@@ -616,7 +639,9 @@ impl DomainEvent for NetworkEvent {
             NetworkEvent::VlanAssignedToPort { metadata, .. } |
             NetworkEvent::SpanningTreeConfigured { metadata, .. } |
             NetworkEvent::MacAddressLearned { metadata, .. } |
-            NetworkEvent::SwitchStackConfigured { metadata, .. } => {
+            NetworkEvent::SwitchStackConfigured { metadata, .. } |
+            NetworkEvent::NixTopologyGenerationStarted { metadata, .. } |
+            NetworkEvent::NixTopologyGenerationCompleted { metadata, .. } => {
                 metadata.aggregate_id.to_uuid()
             }
         }
@@ -642,6 +667,8 @@ impl DomainEvent for NetworkEvent {
             NetworkEvent::SpanningTreeConfigured { .. } => "SpanningTreeConfigured",
             NetworkEvent::MacAddressLearned { .. } => "MacAddressLearned",
             NetworkEvent::SwitchStackConfigured { .. } => "SwitchStackConfigured",
+            NetworkEvent::NixTopologyGenerationStarted { .. } => "NixTopologyGenerationStarted",
+            NetworkEvent::NixTopologyGenerationCompleted { .. } => "NixTopologyGenerationCompleted",
         }
     }
 

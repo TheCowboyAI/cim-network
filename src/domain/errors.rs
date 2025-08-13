@@ -10,6 +10,12 @@ pub enum NetworkError {
     
     #[error("Configuration generation error: {0}")]
     ConfigurationError(String),
+    
+    #[error("Validation error: {0}")]
+    ValidationError(String),
+    
+    #[error("Serialization error: {0}")]
+    SerializationError(String),
 }
 
 impl From<std::fmt::Error> for NetworkError {

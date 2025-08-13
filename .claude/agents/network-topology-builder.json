@@ -1,0 +1,72 @@
+{
+  "name": "Network Topology Builder",
+  "version": "1.0.0",
+  "description": "Interactive sub-agent for building network topologies using event-driven context graphs",
+  "executable": "./network-topology-builder.py",
+  "capabilities": [
+    "Add network locations (data centers, offices, cloud regions, virtual segments)",
+    "Connect locations with various connection types (fiber, VPN, internet, direct connect)",
+    "Validate network topology completeness and correctness", 
+    "Generate configurations in multiple formats (NixOS, Terraform, Ansible, JSON, YAML)",
+    "Provide intelligent suggestions based on current topology state",
+    "Maintain full event audit trail for topology construction"
+  ],
+  "supported_tasks": [
+    "BuildTopology",
+    "AddLocation", 
+    "ConnectLocations",
+    "GenerateConfiguration",
+    "ValidateTopology",
+    "GetStatus",
+    "Reset",
+    "Complete"
+  ],
+  "natural_language_examples": [
+    "start building a topology",
+    "add a datacenter in us-west-1", 
+    "add an office in San Francisco",
+    "add an AWS cloud region",
+    "connect the datacenter to the office with fiber",
+    "generate nixos configuration",
+    "validate the topology",
+    "show current status",
+    "complete the topology"
+  ],
+  "location_types": [
+    "datacenter",
+    "office", 
+    "cloud",
+    "edge",
+    "segment"
+  ],
+  "connection_types": [
+    "fiber",
+    "vpn",
+    "internet",
+    "directconnect",
+    "virtual"
+  ],
+  "configuration_formats": [
+    "nixos",
+    "terraform", 
+    "ansible",
+    "json",
+    "yaml"
+  ],
+  "parameters": {
+    "location_parameters": {
+      "datacenter": ["name", "region", "az"],
+      "office": ["name", "address", "size"],
+      "cloud": ["provider", "region"], 
+      "edge": ["name", "lat", "lng"],
+      "segment": ["name", "subnet", "vlan"]
+    },
+    "connection_parameters": {
+      "fiber": ["bandwidth", "redundant"],
+      "vpn": ["protocol", "encrypted"],
+      "internet": ["bandwidth", "provider"],
+      "directconnect": ["provider", "bandwidth"],
+      "virtual": ["protocol", "bandwidth"]
+    }
+  }
+}

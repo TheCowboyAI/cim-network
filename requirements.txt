@@ -1,0 +1,5 @@
+# MCP (Model Context Protocol) dependencies
+mcp==1.0.0
+
+# Additional dependencies for the MCP server
+asyncio-mqtt==0.16.1

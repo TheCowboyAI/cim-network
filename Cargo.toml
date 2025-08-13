@@ -12,6 +12,9 @@ categories = ["network-programming", "data-structures"]
 [dependencies]
 # Core CIM domain foundation - THIS IS CRITICAL
 cim-domain = { git = "https://github.com/thecowboyai/cim-domain.git", branch = "main" }
+cim-domain-workflow = { path = "./cim-domain-workflow" }
+cim-domain-nix = { path = "./cim-domain-nix" }
+cim-graph = { path = "./cim-graph" }
 
 # Core dependencies
 async-trait = "0.1"
@@ -42,11 +45,15 @@ petgraph = "0.6"
 strum = { version = "0.26", features = ["derive"] }
 strum_macros = "0.26"
 
+
 [dev-dependencies]
 tokio-test = "0.4"
 proptest = "1"
 criterion = { version = "0.5", features = ["html_reports"] }
-once_cell = "1"
+
+[[bin]]
+name = "network-builder"
+path = "src/bin/network-builder.rs"
 
 # [[bench]]
 # name = "state_machine_benchmarks"

@@ -1,0 +1,9 @@
+[submodule "cim-domain-workflow"]
+	path = cim-domain-workflow
+	url = https://github.com/thecowboyai/cim-domain-workflow.git
+[submodule "cim-graph"]
+	path = cim-graph
+	url = https://github.com/thecowboyai/cim-graph.git
+[submodule "cim-domain-nix"]
+	path = cim-domain-nix
+	url = https://github.com/thecowboyai/cim-domain-nix.git

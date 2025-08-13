@@ -6,6 +6,28 @@ use std::str::FromStr;
 use thiserror::Error;
 use uuid::Uuid;
 
+/// Connection identifier for network connections
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct ConnectionId(Uuid);
+
+impl ConnectionId {
+    pub fn new() -> Self {
+        Self(Uuid::new_v4())
+    }
+}
+
+impl std::fmt::Display for ConnectionId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl From<ConnectionId> for AggregateId {
+    fn from(id: ConnectionId) -> Self {
+        Self(id.0.to_string())
+    }
+}
+
 /// Network identifier
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct NetworkId(Uuid);
@@ -226,6 +248,12 @@ impl IpNetwork {
     /// Get the inner network
     pub fn inner(&self) -> &ipnetwork::IpNetwork {
         &self.0
+    }
+}
+
+impl fmt::Display for IpNetwork {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
     }
 }
 
