@@ -24,6 +24,15 @@ try:
 except ImportError:
     ADVANCED_GENERATOR_AVAILABLE = False
 
+try:
+    from .cim_topology import (
+        CimTopologyBuilder, CimTopology, CimTier, ClientType, CimEvent,
+        create_development_cim, create_production_cim
+    )
+    CIM_TOPOLOGY_AVAILABLE = True
+except ImportError:
+    CIM_TOPOLOGY_AVAILABLE = False
+
 
 class SDNMCPServer:
     """Simplified SDN-focused MCP server"""
@@ -31,6 +40,7 @@ class SDNMCPServer:
     def __init__(self):
         self.project_root = Path(__file__).parent.parent
         self.tools = self._define_tools()
+        self.cim_topology = None  # Will be initialized when needed
     
     def _define_tools(self) -> List[Dict[str, Any]]:
         """Define available SDN tools"""
@@ -145,6 +155,42 @@ class SDNMCPServer:
                         "network_cidr": {"type": "string", "default": "192.168.1.0/24"},
                         "domain_name": {"type": "string", "default": "local.network"},
                         "format": {"type": "string", "enum": ["nixos", "nix-darwin", "home-manager"], "default": "nixos"}
+                    }
+                }
+            },
+            {
+                "name": "create_cim_topology",
+                "description": "Create a CIM hierarchical topology (DEV/CLIENT -> LEAF -> cluster -> super-cluster)",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "name": {"type": "string", "description": "Name of the CIM topology"},
+                        "topology_type": {"type": "string", "enum": ["development", "production"], "default": "development"}
+                    },
+                    "required": ["name"]
+                }
+            },
+            {
+                "name": "add_cim_client",
+                "description": "Add a client to the CIM topology",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "name": {"type": "string", "description": "Client name"},
+                        "client_type": {"type": "string", "enum": ["developer", "application", "service", "browser", "cli"]},
+                        "preferred_leaf": {"type": "string", "description": "Optional preferred leaf node ID"}
+                    },
+                    "required": ["name", "client_type"]
+                }
+            },
+            {
+                "name": "generate_cim_config",
+                "description": "Generate nix-topology configuration for CIM deployment",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "tier": {"type": "string", "enum": ["client", "leaf", "cluster", "super_cluster", "all"], "default": "all"},
+                        "node_id": {"type": "string", "description": "Generate config for specific node (optional)"}
                     }
                 }
             }
@@ -367,6 +413,228 @@ class SDNMCPServer:
                     return {
                         "success": False,
                         "message": f"❌ Error generating advanced configuration: {e}",
+                        "data": {}
+                    }
+            
+            elif command == "create_cim_topology":
+                if not CIM_TOPOLOGY_AVAILABLE:
+                    return {
+                        "success": False,
+                        "message": "❌ CIM topology support not available. Please check installation.",
+                        "data": {}
+                    }
+                
+                try:
+                    name = args.get("name")
+                    topology_type = args.get("topology_type", "development")
+                    
+                    # Create CIM topology
+                    if topology_type == "development":
+                        self.cim_topology = create_development_cim(name)
+                    elif topology_type == "production":
+                        self.cim_topology = create_production_cim(name)
+                    else:
+                        return {
+                            "success": False,
+                            "message": f"❌ Unknown topology type: {topology_type}",
+                            "data": {}
+                        }
+                    
+                    summary = self.cim_topology.get_tier_summary()
+                    
+                    return {
+                        "success": True,
+                        "message": f"🏗️ Created CIM topology '{name}' ({topology_type})",
+                        "data": {
+                            "topology_id": summary["topology_id"],
+                            "topology_type": topology_type,
+                            "version": summary["version"],
+                            "tiers": summary["tiers"],
+                            "hierarchy": summary["hierarchy"],
+                            "ready_for_clients": True
+                        }
+                    }
+                    
+                except Exception as e:
+                    return {
+                        "success": False,
+                        "message": f"❌ Error creating multi-site topology: {e}",
+                        "data": {}
+                    }
+            
+            elif command == "add_site":
+                if not MULTI_SITE_AVAILABLE:
+                    return {
+                        "success": False,
+                        "message": "❌ Multi-site topology support not available. Please check installation.",
+                        "data": {}
+                    }
+                
+                if not self.multi_site_builder or not self.multi_site_builder.topology:
+                    return {
+                        "success": False,
+                        "message": "❌ No multi-site topology exists. Create one first using create_multi_site_topology.",
+                        "data": {}
+                    }
+                
+                try:
+                    # Parse site parameters
+                    site_id = args.get("site_id")
+                    name = args.get("name")
+                    city = args.get("city")
+                    country = args.get("country")
+                    
+                    site_type_map = {
+                        "headquarters": SiteType.HEADQUARTERS,
+                        "branch_office": SiteType.BRANCH_OFFICE,
+                        "data_center": SiteType.DATA_CENTER,
+                        "edge_location": SiteType.EDGE_LOCATION,
+                        "disaster_recovery": SiteType.DISASTER_RECOVERY
+                    }
+                    site_type = site_type_map.get(args.get("site_type", "branch_office"), SiteType.BRANCH_OFFICE)
+                    
+                    region_map = {
+                        "north_america": GeographicRegion.NORTH_AMERICA,
+                        "europe": GeographicRegion.EUROPE,
+                        "asia_pacific": GeographicRegion.ASIA_PACIFIC,
+                        "south_america": GeographicRegion.SOUTH_AMERICA,
+                        "africa": GeographicRegion.AFRICA,
+                        "custom": GeographicRegion.CUSTOM
+                    }
+                    region = region_map.get(args.get("region", "north_america"), GeographicRegion.NORTH_AMERICA)
+                    
+                    # Create site location
+                    location = SiteLocation(
+                        city=city,
+                        country=country,
+                        region=region,
+                        timezone="UTC"  # Could be enhanced to auto-detect
+                    )
+                    
+                    # Create network site
+                    site = NetworkSite(
+                        site_id=site_id,
+                        name=name,
+                        site_type=site_type,
+                        location=location,
+                        network_cidr=args.get("network_cidr", "192.168.1.0/24"),
+                        public_ip=args.get("public_ip"),
+                        user_count=args.get("user_count", 10),
+                        criticality=args.get("criticality", 3)
+                    )
+                    
+                    # Add to topology
+                    self.multi_site_builder.add_site(site)
+                    
+                    # Auto-connect if this is not the first site
+                    if len(self.multi_site_builder.topology.sites) > 1:
+                        self.multi_site_builder.auto_connect_sites()
+                    
+                    summary = self.multi_site_builder.get_topology_summary()
+                    
+                    return {
+                        "success": True,
+                        "message": f"📍 Added site '{name}' ({site_id}) to topology",
+                        "data": {
+                            "site_id": site_id,
+                            "name": name,
+                            "site_type": site_type.value,
+                            "location": f"{city}, {country}",
+                            "network_cidr": site.network_cidr,
+                            "user_count": site.user_count,
+                            "total_sites": summary["total_sites"],
+                            "total_connections": summary["total_connections"],
+                            "auto_connected": len(self.multi_site_builder.topology.sites) > 1
+                        }
+                    }
+                    
+                except ValueError as e:
+                    return {
+                        "success": False,
+                        "message": f"❌ Invalid site configuration: {e}",
+                        "data": {}
+                    }
+                except Exception as e:
+                    return {
+                        "success": False,
+                        "message": f"❌ Error adding site: {e}",
+                        "data": {}
+                    }
+            
+            elif command == "generate_multi_site_config":
+                if not MULTI_SITE_AVAILABLE:
+                    return {
+                        "success": False,
+                        "message": "❌ Multi-site topology support not available. Please check installation.",
+                        "data": {}
+                    }
+                
+                if not self.multi_site_builder or not self.multi_site_builder.topology:
+                    return {
+                        "success": False,
+                        "message": "❌ No multi-site topology exists. Create one first using create_multi_site_topology.",
+                        "data": {}
+                    }
+                
+                try:
+                    site_id = args.get("site_id")
+                    global_config = args.get("global_config", False)
+                    
+                    generator = MultiSiteNixGenerator(self.multi_site_builder.topology)
+                    
+                    if global_config:
+                        # Generate global management configuration
+                        config = generator.generate_global_configuration()
+                        config_type = "global-management"
+                        description = "Global multi-site management configuration"
+                    elif site_id:
+                        # Generate site-specific configuration
+                        if site_id not in self.multi_site_builder.topology.sites:
+                            return {
+                                "success": False,
+                                "message": f"❌ Site '{site_id}' not found in topology.",
+                                "data": {}
+                            }
+                        config = generator.generate_site_configuration(site_id)
+                        config_type = f"site-{site_id}"
+                        site_name = self.multi_site_builder.topology.sites[site_id].name
+                        description = f"Site configuration for {site_name}"
+                    else:
+                        # Generate configuration for all sites
+                        all_configs = {}
+                        for sid in self.multi_site_builder.topology.sites.keys():
+                            all_configs[sid] = generator.generate_site_configuration(sid)
+                        
+                        # Also include global config
+                        all_configs["global-management"] = generator.generate_global_configuration()
+                        
+                        return {
+                            "success": True,
+                            "message": f"🌐 Generated configurations for all {len(self.multi_site_builder.topology.sites)} sites",
+                            "data": {
+                                "configurations": all_configs,
+                                "total_sites": len(self.multi_site_builder.topology.sites),
+                                "includes_global": True,
+                                "deployment_ready": True
+                            }
+                        }
+                    
+                    return {
+                        "success": True,
+                        "message": f"🔧 Generated {config_type} configuration",
+                        "data": {
+                            "config_type": config_type,
+                            "description": description,
+                            "configuration": config,
+                            "deployment_ready": True,
+                            "nix_topology_compliant": True
+                        }
+                    }
+                    
+                except Exception as e:
+                    return {
+                        "success": False,
+                        "message": f"❌ Error generating configuration: {e}",
                         "data": {}
                     }
             
@@ -1198,6 +1466,9 @@ ISP-2 ────┘                             ├─── APP-02
             "connect_sdn_nodes": "connect_sdn_nodes",
             "generate_nix_topology": "generate_nix_topology",
             "generate_advanced_nix": "generate_advanced_nix",
+            "create_multi_site_topology": "create_multi_site_topology",
+            "add_site": "add_site",
+            "generate_multi_site_config": "generate_multi_site_config",
             "get_sdn_state": "get_sdn_state",
             "export_context_graph": "export_context_graph",
             "visualize_topology": "visualize_topology",
