@@ -188,6 +188,12 @@ impl NetworkEvent {
     /// Get NATS subject for this event
     /// Format: network.{aggregate_type}.{event_type}
     pub fn nats_subject(&self) -> String {
+        self.nats_subject_with_prefix("network")
+    }
+
+    /// Get NATS subject with a custom prefix
+    /// Format: {prefix}.{aggregate_type}.{event_type}
+    pub fn nats_subject_with_prefix(&self, prefix: &str) -> String {
         let aggregate_type = match self {
             NetworkEvent::DeviceDiscovered { .. }
             | NetworkEvent::DeviceAdopting { .. }
@@ -210,6 +216,6 @@ impl NetworkEvent {
             | NetworkEvent::IpAddressAllocated { .. } => "inventory",
         };
 
-        format!("network.{}.{}", aggregate_type, self.event_type())
+        format!("{}.{}.{}", prefix, aggregate_type, self.event_type())
     }
 }

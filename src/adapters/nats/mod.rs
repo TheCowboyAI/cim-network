@@ -63,6 +63,9 @@ pub struct NatsEventStoreConfig {
     pub nats_url: String,
     /// Stream name (defaults to "network-events")
     pub stream_name: String,
+    /// Subject prefix (defaults to "network")
+    /// Each stream should use a unique prefix to avoid overlaps
+    pub subject_prefix: String,
     /// Maximum messages in the stream (0 = unlimited)
     pub max_messages: i64,
     /// Maximum age of messages (0 = unlimited)
@@ -76,9 +79,27 @@ impl Default for NatsEventStoreConfig {
         Self {
             nats_url: "nats://localhost:4222".to_string(),
             stream_name: STREAM_NAME.to_string(),
+            subject_prefix: SUBJECT_PREFIX.to_string(),
             max_messages: 0,        // Unlimited
             max_age_seconds: 0,     // Keep forever
             replicas: 1,            // Single node
+        }
+    }
+}
+
+impl NatsEventStoreConfig {
+    /// Create a unique configuration for testing
+    /// Uses a UUID-based stream name and subject prefix to avoid conflicts
+    pub fn for_testing(nats_url: &str) -> Self {
+        let id = uuid::Uuid::now_v7().to_string();
+        let short_id = &id[..8];
+        Self {
+            nats_url: nats_url.to_string(),
+            stream_name: format!("test-{}", short_id),
+            subject_prefix: format!("test-{}", short_id),
+            max_messages: 0,
+            max_age_seconds: 0,
+            replicas: 1,
         }
     }
 }
@@ -146,7 +167,7 @@ impl NatsEventStore {
         let stream_config = jetstream::stream::Config {
             name: self.config.stream_name.clone(),
             description: Some("Network domain events for CIM".to_string()),
-            subjects: vec![format!("{}.*.*", SUBJECT_PREFIX)],
+            subjects: vec![format!("{}.*.*", self.config.subject_prefix)],
             retention: jetstream::stream::RetentionPolicy::Limits,
             max_messages: self.config.max_messages,
             max_age: if self.config.max_age_seconds > 0 {
@@ -177,9 +198,9 @@ impl NatsEventStore {
         Ok(())
     }
 
-    /// Get the NATS subject for an event
-    fn event_subject(event: &NetworkEvent) -> String {
-        event.nats_subject()
+    /// Get the NATS subject for an event using the configured prefix
+    fn event_subject(&self, event: &NetworkEvent) -> String {
+        event.nats_subject_with_prefix(&self.config.subject_prefix)
     }
 
     /// Create headers for an event message
@@ -216,7 +237,7 @@ impl NatsEventStore {
         event: &NetworkEvent,
         correlation_id: Option<&str>,
     ) -> Result<(), PortError> {
-        let subject = Self::event_subject(event);
+        let subject = self.event_subject(event);
         let headers = Self::create_headers(event, correlation_id);
 
         let payload = serde_json::to_vec(event)
@@ -298,12 +319,12 @@ impl EventStorePort for NatsEventStore {
 
     async fn load_events(&self, aggregate_id: &str) -> Result<Vec<NetworkEvent>, PortError> {
         // Create a filter subject that matches all events for this aggregate
-        // Events are published to network.{aggregate_type}.{event_type}
+        // Events are published to {prefix}.{aggregate_type}.{event_type}
         // We need to filter by aggregate_id in the message body
 
         // For efficiency, we'll filter by the aggregate type prefix if we can determine it
         // This is a simplification - in production you might have aggregate-specific streams
-        let filter_subject = format!("{}.>", SUBJECT_PREFIX);
+        let filter_subject = format!("{}.>", self.config.subject_prefix);
 
         let consumer_name = format!("replay-{}-{}", aggregate_id, uuid::Uuid::now_v7());
         let consumer = self.create_replay_consumer(&filter_subject, &consumer_name).await?;
