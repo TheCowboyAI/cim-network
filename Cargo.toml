@@ -12,8 +12,7 @@ categories = ["network-programming"]
 [dependencies]
 # Core CIM foundation - current versions
 cim-domain = { git = "https://github.com/thecowboyai/cim-domain.git", branch = "main" }
-# cim-graph temporarily disabled - has compile errors in main branch
-# cim-graph = { git = "https://github.com/thecowboyai/cim-graph.git", branch = "main" }
+cim-graph = { git = "https://github.com/thecowboyai/cim-graph.git", tag = "v0.9.1" }
 
 # Core dependencies
 async-trait = "0.1"
