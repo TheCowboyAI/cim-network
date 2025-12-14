@@ -1,0 +1,38 @@
+[package]
+name = "cim-network"
+version = "0.1.0"
+edition = "2021"
+authors = ["TheCowboyAI"]
+description = "Network infrastructure domain module for CIM"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/TheCowboyAI/cim-network"
+keywords = ["cim", "network", "infrastructure", "event-sourcing", "ddd"]
+categories = ["network-programming"]
+
+[dependencies]
+# Core CIM foundation - current versions
+cim-domain = { git = "https://github.com/thecowboyai/cim-domain.git", branch = "main" }
+# cim-graph temporarily disabled - has compile errors in main branch
+# cim-graph = { git = "https://github.com/thecowboyai/cim-graph.git", branch = "main" }
+
+# Core dependencies
+async-trait = "0.1"
+tokio = { version = "1", features = ["full"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+uuid = { version = "1", features = ["v7", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+
+# Network types
+ipnetwork = "0.20"
+
+# Tracing
+tracing = "0.1"
+
+[dev-dependencies]
+tokio-test = "0.4"
+
+[features]
+default = []
+full = []
