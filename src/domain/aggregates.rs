@@ -453,3 +453,329 @@ pub enum AggregateError {
     #[error("Concurrency conflict: expected version {expected}, found {actual}")]
     ConcurrencyConflict { expected: u64, actual: u64 },
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn create_test_mac() -> MacAddress {
+        MacAddress::parse("00:11:22:33:44:55").unwrap()
+    }
+
+    // ==========================================================================
+    // DeviceState Tests
+    // ==========================================================================
+
+    #[test]
+    fn test_device_state_default() {
+        assert_eq!(DeviceState::default(), DeviceState::Discovered);
+    }
+
+    #[test]
+    fn test_device_state_transitions_from_discovered() {
+        let state = DeviceState::Discovered;
+        assert!(state.can_transition_to(DeviceState::Adopting));
+        assert!(state.can_transition_to(DeviceState::Decommissioned));
+        assert!(!state.can_transition_to(DeviceState::Provisioned));
+        assert!(!state.can_transition_to(DeviceState::Configuring));
+        assert!(!state.can_transition_to(DeviceState::Error));
+    }
+
+    #[test]
+    fn test_device_state_transitions_from_adopting() {
+        let state = DeviceState::Adopting;
+        assert!(state.can_transition_to(DeviceState::Provisioned));
+        assert!(state.can_transition_to(DeviceState::Error));
+        assert!(!state.can_transition_to(DeviceState::Discovered));
+        assert!(!state.can_transition_to(DeviceState::Decommissioned));
+    }
+
+    #[test]
+    fn test_device_state_transitions_from_provisioned() {
+        let state = DeviceState::Provisioned;
+        assert!(state.can_transition_to(DeviceState::Configuring));
+        assert!(state.can_transition_to(DeviceState::Decommissioned));
+        assert!(!state.can_transition_to(DeviceState::Adopting));
+        assert!(!state.can_transition_to(DeviceState::Discovered));
+    }
+
+    #[test]
+    fn test_device_state_transitions_from_configuring() {
+        let state = DeviceState::Configuring;
+        assert!(state.can_transition_to(DeviceState::Provisioned));
+        assert!(state.can_transition_to(DeviceState::Error));
+        assert!(!state.can_transition_to(DeviceState::Adopting));
+    }
+
+    #[test]
+    fn test_device_state_transitions_from_error() {
+        let state = DeviceState::Error;
+        assert!(state.can_transition_to(DeviceState::Adopting)); // retry
+        assert!(state.can_transition_to(DeviceState::Decommissioned));
+        assert!(!state.can_transition_to(DeviceState::Provisioned));
+    }
+
+    #[test]
+    fn test_device_state_terminal() {
+        assert!(DeviceState::Decommissioned.is_terminal());
+        assert!(!DeviceState::Discovered.is_terminal());
+        assert!(!DeviceState::Provisioned.is_terminal());
+        assert!(DeviceState::Decommissioned.valid_transitions().is_empty());
+    }
+
+    #[test]
+    fn test_device_state_names() {
+        assert_eq!(DeviceState::Discovered.name(), "Discovered");
+        assert_eq!(DeviceState::Adopting.name(), "Adopting");
+        assert_eq!(DeviceState::Provisioned.name(), "Provisioned");
+        assert_eq!(DeviceState::Configuring.name(), "Configuring");
+        assert_eq!(DeviceState::Error.name(), "Error");
+        assert_eq!(DeviceState::Decommissioned.name(), "Decommissioned");
+    }
+
+    // ==========================================================================
+    // NetworkDeviceAggregate Tests
+    // ==========================================================================
+
+    #[test]
+    fn test_aggregate_new_discovered() {
+        let mac = create_test_mac();
+        let device = NetworkDeviceAggregate::new_discovered(
+            mac,
+            DeviceType::Switch,
+            Some("192.168.1.1".parse().unwrap()),
+        );
+
+        assert_eq!(device.state(), DeviceState::Discovered);
+        assert_eq!(device.mac(), mac);
+        assert!(device.name().starts_with("Device-"));
+        assert_eq!(device.version(), 1);
+    }
+
+    #[test]
+    fn test_aggregate_adopt() {
+        let mac = create_test_mac();
+        let mut device = NetworkDeviceAggregate::new_discovered(
+            mac,
+            DeviceType::Switch,
+            None,
+        );
+        device.take_pending_events(); // Clear discovery event
+
+        let result = device.adopt("vendor-123".to_string());
+        assert!(result.is_ok());
+        assert_eq!(device.state(), DeviceState::Adopting);
+        assert_eq!(device.vendor_id(), Some("vendor-123"));
+
+        let events = device.take_pending_events();
+        assert_eq!(events.len(), 1);
+        assert!(matches!(events[0], NetworkEvent::DeviceAdopting { .. }));
+    }
+
+    #[test]
+    fn test_aggregate_cannot_adopt_from_provisioned() {
+        let mac = create_test_mac();
+        let mut device = NetworkDeviceAggregate::new_discovered(
+            mac,
+            DeviceType::Switch,
+            None,
+        );
+        device.adopt("vendor-123".to_string()).unwrap();
+        device.mark_provisioned("Model-X".to_string(), "1.0.0".to_string()).unwrap();
+        device.take_pending_events();
+
+        // Should fail - can't adopt from provisioned state
+        let result = device.adopt("vendor-456".to_string());
+        assert!(result.is_err());
+        assert!(matches!(
+            result.unwrap_err(),
+            AggregateError::InvalidTransition { .. }
+        ));
+    }
+
+    #[test]
+    fn test_aggregate_full_lifecycle() {
+        let mac = create_test_mac();
+        let mut device = NetworkDeviceAggregate::new_discovered(
+            mac,
+            DeviceType::AccessPoint,
+            Some("10.0.0.50".parse().unwrap()),
+        );
+
+        // Discovery
+        assert_eq!(device.state(), DeviceState::Discovered);
+
+        // Adopt
+        device.adopt("ap-001".to_string()).unwrap();
+        assert_eq!(device.state(), DeviceState::Adopting);
+
+        // Provision
+        device.mark_provisioned("UAP-AC-Pro".to_string(), "6.2.0".to_string()).unwrap();
+        assert_eq!(device.state(), DeviceState::Provisioned);
+
+        // Configure
+        device.start_configuration().unwrap();
+        assert_eq!(device.state(), DeviceState::Configuring);
+
+        // Complete config
+        device.complete_configuration(vec![], vec![]).unwrap();
+        assert_eq!(device.state(), DeviceState::Provisioned);
+
+        // Decommission
+        device.decommission().unwrap();
+        assert_eq!(device.state(), DeviceState::Decommissioned);
+        assert!(device.state().is_terminal());
+    }
+
+    #[test]
+    fn test_aggregate_error_recovery() {
+        let mac = create_test_mac();
+        let mut device = NetworkDeviceAggregate::new_discovered(
+            mac,
+            DeviceType::Gateway,
+            None,
+        );
+
+        device.adopt("gw-001".to_string()).unwrap();
+
+        // Simulate error during adoption
+        device.record_error("Connection timeout".to_string()).unwrap();
+        assert_eq!(device.state(), DeviceState::Error);
+
+        // Retry adoption
+        device.adopt("gw-001".to_string()).unwrap();
+        assert_eq!(device.state(), DeviceState::Adopting);
+    }
+
+    #[test]
+    fn test_aggregate_rename() {
+        let mac = create_test_mac();
+        let mut device = NetworkDeviceAggregate::new_discovered(
+            mac,
+            DeviceType::Switch,
+            None,
+        );
+        let original_name = device.name().to_string();
+        device.take_pending_events();
+
+        device.rename("Core-Switch-1".to_string()).unwrap();
+        assert_eq!(device.name(), "Core-Switch-1");
+
+        let events = device.take_pending_events();
+        assert_eq!(events.len(), 1);
+        match &events[0] {
+            NetworkEvent::DeviceRenamed { old_name, new_name, .. } => {
+                assert_eq!(old_name, &original_name);
+                assert_eq!(new_name, "Core-Switch-1");
+            }
+            _ => panic!("Expected DeviceRenamed event"),
+        }
+    }
+
+    #[test]
+    fn test_aggregate_cannot_rename_decommissioned() {
+        let mac = create_test_mac();
+        let mut device = NetworkDeviceAggregate::new_discovered(
+            mac,
+            DeviceType::Switch,
+            None,
+        );
+        device.decommission().unwrap();
+
+        let result = device.rename("New-Name".to_string());
+        assert!(result.is_err());
+        assert!(matches!(
+            result.unwrap_err(),
+            AggregateError::InvalidState { operation, .. } if operation == "rename"
+        ));
+    }
+
+    #[test]
+    fn test_aggregate_from_events() {
+        let device_id = DeviceId::new();
+        let mac = create_test_mac();
+
+        let events = vec![
+            NetworkEvent::DeviceDiscovered {
+                device_id,
+                mac,
+                device_type: DeviceType::Switch,
+                ip_address: Some("192.168.1.10".parse().unwrap()),
+            },
+            NetworkEvent::DeviceAdopting {
+                device_id,
+                vendor_id: "switch-001".to_string(),
+            },
+            NetworkEvent::DeviceProvisioned {
+                device_id,
+                model: "USW-24".to_string(),
+                firmware_version: "6.6.0".to_string(),
+            },
+            NetworkEvent::DeviceRenamed {
+                device_id,
+                old_name: "Device-123".to_string(),
+                new_name: "Main-Switch".to_string(),
+            },
+        ];
+
+        let device = NetworkDeviceAggregate::from_events(events);
+        assert!(device.is_some());
+
+        let device = device.unwrap();
+        assert_eq!(device.id(), device_id);
+        assert_eq!(device.mac(), mac);
+        assert_eq!(device.state(), DeviceState::Provisioned);
+        assert_eq!(device.name(), "Main-Switch");
+        assert_eq!(device.version(), 4);
+    }
+
+    #[test]
+    fn test_aggregate_from_events_empty() {
+        let events: Vec<NetworkEvent> = vec![];
+        let device = NetworkDeviceAggregate::from_events(events);
+        assert!(device.is_none());
+    }
+
+    #[test]
+    fn test_aggregate_version_increments() {
+        let mac = create_test_mac();
+        let mut device = NetworkDeviceAggregate::new_discovered(
+            mac,
+            DeviceType::Switch,
+            None,
+        );
+        assert_eq!(device.version(), 1);
+
+        device.adopt("v-1".to_string()).unwrap();
+        assert_eq!(device.version(), 2);
+
+        device.mark_provisioned("Model".to_string(), "1.0".to_string()).unwrap();
+        assert_eq!(device.version(), 3);
+
+        device.rename("New".to_string()).unwrap();
+        assert_eq!(device.version(), 4);
+    }
+
+    #[test]
+    fn test_aggregate_pending_events() {
+        let mac = create_test_mac();
+        let mut device = NetworkDeviceAggregate::new_discovered(
+            mac,
+            DeviceType::Switch,
+            None,
+        );
+
+        // Should have one event from creation
+        let events = device.take_pending_events();
+        assert_eq!(events.len(), 1);
+
+        // After taking, should be empty
+        let events = device.take_pending_events();
+        assert!(events.is_empty());
+
+        // New action creates new event
+        device.adopt("v-1".to_string()).unwrap();
+        let events = device.take_pending_events();
+        assert_eq!(events.len(), 1);
+    }
+}

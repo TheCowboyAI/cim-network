@@ -301,3 +301,234 @@ impl fmt::Display for LinkSpeed {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ==========================================================================
+    // DeviceId Tests
+    // ==========================================================================
+
+    #[test]
+    fn test_device_id_new() {
+        let id1 = DeviceId::new();
+        let id2 = DeviceId::new();
+        assert_ne!(id1, id2);
+    }
+
+    #[test]
+    fn test_device_id_display() {
+        let id = DeviceId::new();
+        let display = format!("{}", id);
+        assert!(!display.is_empty());
+        // UUID v7 format
+        assert_eq!(display.len(), 36);
+    }
+
+    #[test]
+    fn test_device_id_serde() {
+        let id = DeviceId::new();
+        let json = serde_json::to_string(&id).unwrap();
+        let parsed: DeviceId = serde_json::from_str(&json).unwrap();
+        assert_eq!(id, parsed);
+    }
+
+    // ==========================================================================
+    // MacAddress Tests
+    // ==========================================================================
+
+    #[test]
+    fn test_mac_address_parse_valid() {
+        // Colon-separated
+        let mac = MacAddress::parse("00:11:22:33:44:55");
+        assert!(mac.is_ok());
+
+        // Hyphen-separated
+        let mac = MacAddress::parse("AA-BB-CC-DD-EE-FF");
+        assert!(mac.is_ok());
+
+        // Lowercase
+        let mac = MacAddress::parse("de:ad:be:ef:ca:fe");
+        assert!(mac.is_ok());
+    }
+
+    #[test]
+    fn test_mac_address_parse_invalid_length() {
+        let mac = MacAddress::parse("00:11:22:33:44");
+        assert!(mac.is_err());
+        assert!(matches!(mac.unwrap_err(), MacAddressError::InvalidLength));
+    }
+
+    #[test]
+    fn test_mac_address_parse_invalid_format() {
+        let mac = MacAddress::parse("00:11:22:33:44:GG");
+        assert!(mac.is_err());
+        assert!(matches!(mac.unwrap_err(), MacAddressError::InvalidFormat));
+    }
+
+    #[test]
+    fn test_mac_address_display() {
+        let mac = MacAddress::parse("00:11:22:33:44:55").unwrap();
+        assert_eq!(format!("{}", mac), "00:11:22:33:44:55");
+
+        // Display always outputs lowercase (uses {:02x} format)
+        let mac = MacAddress::parse("AA:BB:CC:DD:EE:FF").unwrap();
+        assert_eq!(format!("{}", mac), "aa:bb:cc:dd:ee:ff");
+    }
+
+    #[test]
+    fn test_mac_address_equality() {
+        let mac1 = MacAddress::parse("00:11:22:33:44:55").unwrap();
+        let mac2 = MacAddress::parse("00:11:22:33:44:55").unwrap();
+        let mac3 = MacAddress::parse("AA:BB:CC:DD:EE:FF").unwrap();
+
+        assert_eq!(mac1, mac2);
+        assert_ne!(mac1, mac3);
+    }
+
+    #[test]
+    fn test_mac_address_serde() {
+        let mac = MacAddress::parse("DE:AD:BE:EF:CA:FE").unwrap();
+        let json = serde_json::to_string(&mac).unwrap();
+        let parsed: MacAddress = serde_json::from_str(&json).unwrap();
+        assert_eq!(mac, parsed);
+    }
+
+    // ==========================================================================
+    // DeviceType Tests
+    // ==========================================================================
+
+    #[test]
+    fn test_device_type_display() {
+        assert_eq!(format!("{}", DeviceType::Gateway), "Gateway");
+        assert_eq!(format!("{}", DeviceType::Switch), "Switch");
+        assert_eq!(format!("{}", DeviceType::AccessPoint), "AccessPoint");
+        assert_eq!(
+            format!("{}", DeviceType::Generic { model: "Custom".to_string() }),
+            "Generic(Custom)"
+        );
+    }
+
+    #[test]
+    fn test_device_type_serde() {
+        let dt = DeviceType::Switch;
+        let json = serde_json::to_string(&dt).unwrap();
+        let parsed: DeviceType = serde_json::from_str(&json).unwrap();
+        assert_eq!(dt, parsed);
+
+        let generic = DeviceType::Generic { model: "Test".to_string() };
+        let json = serde_json::to_string(&generic).unwrap();
+        let parsed: DeviceType = serde_json::from_str(&json).unwrap();
+        assert_eq!(generic, parsed);
+    }
+
+    // ==========================================================================
+    // PortId Tests
+    // ==========================================================================
+
+    #[test]
+    fn test_port_id_new() {
+        let port = PortId::new("eth0");
+        assert_eq!(port.name, "eth0");
+        assert_eq!(port.index, None);
+    }
+
+    #[test]
+    fn test_port_id_with_index() {
+        let port = PortId::with_index("port", 5);
+        assert_eq!(port.name, "port");
+        assert_eq!(port.index, Some(5));
+    }
+
+    #[test]
+    fn test_port_id_display() {
+        let port1 = PortId::new("eth0");
+        assert_eq!(format!("{}", port1), "eth0");
+
+        let port2 = PortId::with_index("port", 3);
+        assert_eq!(format!("{}", port2), "port[3]");
+    }
+
+    // ==========================================================================
+    // VlanConfig Tests
+    // ==========================================================================
+
+    #[test]
+    fn test_vlan_config_valid() {
+        let vlan = VlanConfig::new(100, "Management");
+        assert!(vlan.is_ok());
+        let vlan = vlan.unwrap();
+        assert_eq!(vlan.id, 100);
+        assert_eq!(vlan.name, "Management");
+        assert!(!vlan.native);
+    }
+
+    #[test]
+    fn test_vlan_config_invalid_id_zero() {
+        let vlan = VlanConfig::new(0, "Invalid");
+        assert!(vlan.is_err());
+        assert!(matches!(vlan.unwrap_err(), VlanError::InvalidId(0)));
+    }
+
+    #[test]
+    fn test_vlan_config_invalid_id_too_high() {
+        let vlan = VlanConfig::new(4095, "Invalid");
+        assert!(vlan.is_err());
+        assert!(matches!(vlan.unwrap_err(), VlanError::InvalidId(4095)));
+    }
+
+    #[test]
+    fn test_vlan_config_boundary() {
+        // VLAN 1 is valid (minimum)
+        let vlan1 = VlanConfig::new(1, "Default");
+        assert!(vlan1.is_ok());
+
+        // VLAN 4094 is valid (maximum)
+        let vlan4094 = VlanConfig::new(4094, "Max");
+        assert!(vlan4094.is_ok());
+    }
+
+    // ==========================================================================
+    // LinkSpeed Tests
+    // ==========================================================================
+
+    #[test]
+    fn test_link_speed_display() {
+        assert_eq!(format!("{}", LinkSpeed::Mbps10), "10 Mbps");
+        assert_eq!(format!("{}", LinkSpeed::Mbps100), "100 Mbps");
+        assert_eq!(format!("{}", LinkSpeed::Gbps1), "1 Gbps");
+        assert_eq!(format!("{}", LinkSpeed::Gbps10), "10 Gbps");
+        assert_eq!(format!("{}", LinkSpeed::Gbps100), "100 Gbps");
+    }
+
+    // ==========================================================================
+    // ConnectionType Tests
+    // ==========================================================================
+
+    #[test]
+    fn test_connection_type_equality() {
+        assert_eq!(ConnectionType::Ethernet, ConnectionType::Ethernet);
+        assert_ne!(ConnectionType::Ethernet, ConnectionType::Fiber);
+    }
+
+    // ==========================================================================
+    // InterfaceConfig Tests
+    // ==========================================================================
+
+    #[test]
+    fn test_interface_config() {
+        let iface = InterfaceConfig {
+            name: "eth0".to_string(),
+            ip_address: Some("192.168.1.10".parse().unwrap()),
+            prefix_len: Some(24),
+            vlan_id: Some(100),
+            enabled: true,
+        };
+
+        assert!(iface.enabled);
+        assert_eq!(iface.name, "eth0");
+        assert_eq!(iface.vlan_id, Some(100));
+        assert_eq!(iface.prefix_len, Some(24));
+    }
+}

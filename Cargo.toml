@@ -41,6 +41,10 @@ urlencoding = "2.1"
 tokio-test = "0.4"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
+[[example]]
+name = "demo"
+path = "examples/demo.rs"
+
 [features]
 default = []
 full = []
