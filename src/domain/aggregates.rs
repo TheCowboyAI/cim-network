@@ -181,6 +181,31 @@ impl NetworkDeviceAggregate {
         device
     }
 
+    /// Create from a discovered event (for replay)
+    pub fn from_discovered_event(
+        device_id: DeviceId,
+        mac: MacAddress,
+        device_type: DeviceType,
+        ip_address: Option<std::net::IpAddr>,
+    ) -> Self {
+        Self {
+            id: device_id,
+            state: DeviceState::Discovered,
+            version: 1,
+            mac,
+            device_type,
+            name: format!("Device-{}", &device_id.to_string()[..8]),
+            model: None,
+            firmware_version: None,
+            ip_address,
+            vendor_id: None,
+            interfaces: Vec::new(),
+            vlans: Vec::new(),
+            pending_events: Vec::new(),
+            error_message: None,
+        }
+    }
+
     /// Reconstruct from events
     pub fn from_events(events: impl IntoIterator<Item = NetworkEvent>) -> Option<Self> {
         let mut device: Option<Self> = None;

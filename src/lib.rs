@@ -45,27 +45,40 @@
 //! ## Quick Start
 //!
 //! ```rust,ignore
-//! use cim_network::domain::*;
-//! use cim_network::adapters::UniFiAdapter;
+//! use cim_network::*;
+//!
+//! // Connect to NATS for event persistence
+//! let event_store = NatsEventStore::connect("nats://localhost:4222").await?;
 //!
 //! // Create domain aggregate
 //! let mac = MacAddress::parse("00:11:22:33:44:55").unwrap();
-//! let device = NetworkDeviceAggregate::new_discovered(
+//! let mut device = NetworkDeviceAggregate::new_discovered(
 //!     mac,
 //!     DeviceType::Switch,
 //!     Some("192.168.1.100".parse().unwrap()),
 //! );
 //!
-//! // Use UniFi adapter
-//! let adapter = UniFiAdapter::new(
+//! // Persist discovery event
+//! event_store.append(device.take_pending_events()).await?;
+//!
+//! // Use UniFi adapter for device control
+//! let unifi = UniFiAdapter::new(
 //!     "https://unifi.local:8443",
 //!     "admin",
 //!     "password",
 //!     "default",
 //! ).await?;
+//! unifi.connect().await?;
 //!
-//! // Adopt device through port
-//! adapter.adopt_device(&device.vendor_id().unwrap()).await?;
+//! // Adopt device
+//! unifi.adopt_device(&device.mac().to_string()).await?;
+//!
+//! // Sync to NetBox inventory
+//! let netbox = NetBoxAdapter::new(
+//!     "https://netbox.local",
+//!     "api-token",
+//! )?;
+//! netbox.sync_device(&device).await?;
 //! ```
 
 #![warn(missing_docs)]
@@ -91,4 +104,9 @@ pub use domain::{
     DomainObject, ExtendedRepresentation, FunctorError,
 };
 
-pub use adapters::{UniFiAdapter, NetBoxAdapter};
+pub use adapters::{
+    UniFiAdapter, NetBoxAdapter,
+    NatsEventStore, NatsEventStoreConfig, NatsEventSubscriber, NatsEventAck,
+};
+
+pub mod service;
