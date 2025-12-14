@@ -24,6 +24,9 @@ use crate::domain::functor::*;
 use crate::domain::events::*;
 use crate::domain::value_objects::*;
 
+/// Sync MAC registry for use in synchronous trait methods
+type SyncMacRegistry = std::sync::RwLock<HashMap<MacAddress, DeviceId>>;
+
 mod client;
 mod types;
 
@@ -38,10 +41,12 @@ pub use types::*;
 pub struct UniFiAdapter {
     /// HTTP client for UniFi API
     client: Arc<UniFiClient>,
-    /// Mapping from domain DeviceId to UniFi device ID
+    /// Mapping from domain DeviceId to UniFi device ID (MAC)
     device_mapping: Arc<RwLock<HashMap<DeviceId, String>>>,
-    /// Mapping from UniFi device ID to domain DeviceId
+    /// Mapping from UniFi device ID (MAC) to domain DeviceId
     reverse_mapping: Arc<RwLock<HashMap<String, DeviceId>>>,
+    /// Mapping from MAC address to domain DeviceId for event translation (sync for trait methods)
+    mac_registry: Arc<SyncMacRegistry>,
     /// Site ID (UniFi sites)
     site_id: String,
 }
@@ -62,16 +67,35 @@ impl UniFiAdapter {
             client: Arc::new(client),
             device_mapping: Arc::new(RwLock::new(HashMap::new())),
             reverse_mapping: Arc::new(RwLock::new(HashMap::new())),
+            mac_registry: Arc::new(std::sync::RwLock::new(HashMap::new())),
             site_id: site_id.to_string(),
         })
     }
 
-    /// Map a domain device to UniFi device ID
-    pub async fn map_device(&self, device_id: DeviceId, unifi_id: String) {
+    /// Map a domain device to UniFi device ID and MAC address
+    pub async fn map_device(&self, device_id: DeviceId, unifi_id: String, mac: MacAddress) {
         let mut mapping = self.device_mapping.write().await;
         let mut reverse = self.reverse_mapping.write().await;
         mapping.insert(device_id, unifi_id.clone());
         reverse.insert(unifi_id, device_id);
+        // Sync lock for MAC registry
+        if let Ok(mut mac_reg) = self.mac_registry.write() {
+            mac_reg.insert(mac, device_id);
+        }
+    }
+
+    /// Register a MAC address to device ID mapping
+    pub fn register_mac(&self, mac: MacAddress, device_id: DeviceId) {
+        if let Ok(mut mac_reg) = self.mac_registry.write() {
+            mac_reg.insert(mac, device_id);
+        }
+    }
+
+    /// Look up device ID by MAC address (synchronous for trait methods)
+    pub fn get_device_by_mac(&self, mac: &MacAddress) -> Option<DeviceId> {
+        self.mac_registry.read()
+            .ok()
+            .and_then(|reg| reg.get(mac).copied())
     }
 
     /// Get UniFi device ID for a domain device
@@ -244,12 +268,80 @@ impl VendorExtension for UniFiAdapter {
                 let mac = MacAddress::parse(mac_str)
                     .map_err(|e| FunctorError::MappingFailed(e.to_string()))?;
 
-                // This would need to look up the device ID from MAC
-                // For now, return a placeholder
+                // Look up device ID from MAC registry
+                let device_id = self.get_device_by_mac(&mac)
+                    .ok_or_else(|| FunctorError::MappingFailed(
+                        format!("Unknown device MAC: {}. Register device first.", mac)
+                    ))?;
+
+                // Extract model and firmware from event if available
+                let model = vendor_event.get("model")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("unknown")
+                    .to_string();
+
+                let firmware_version = vendor_event.get("version")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("unknown")
+                    .to_string();
+
                 Ok(NetworkEvent::DeviceProvisioned {
-                    device_id: DeviceId::new(), // Would need lookup
-                    model: "unknown".to_string(),
-                    firmware_version: "unknown".to_string(),
+                    device_id,
+                    model,
+                    firmware_version,
+                })
+            }
+            "EVT_AP_Disconnected" | "EVT_SW_Disconnected" | "EVT_GW_Disconnected" => {
+                let mac_str = vendor_event.get("ap")
+                    .or_else(|| vendor_event.get("sw"))
+                    .or_else(|| vendor_event.get("gw"))
+                    .and_then(|v| v.as_str())
+                    .ok_or_else(|| FunctorError::MappingFailed("Missing device MAC".to_string()))?;
+
+                let mac = MacAddress::parse(mac_str)
+                    .map_err(|e| FunctorError::MappingFailed(e.to_string()))?;
+
+                let device_id = self.get_device_by_mac(&mac)
+                    .ok_or_else(|| FunctorError::MappingFailed(
+                        format!("Unknown device MAC: {}", mac)
+                    ))?;
+
+                let message = vendor_event.get("msg")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("Device disconnected")
+                    .to_string();
+
+                Ok(NetworkEvent::DeviceError {
+                    device_id,
+                    message,
+                })
+            }
+            "EVT_AP_RestartedUnknown" | "EVT_SW_RestartedUnknown" | "EVT_GW_RestartedUnknown" => {
+                let mac_str = vendor_event.get("ap")
+                    .or_else(|| vendor_event.get("sw"))
+                    .or_else(|| vendor_event.get("gw"))
+                    .and_then(|v| v.as_str())
+                    .ok_or_else(|| FunctorError::MappingFailed("Missing device MAC".to_string()))?;
+
+                let mac = MacAddress::parse(mac_str)
+                    .map_err(|e| FunctorError::MappingFailed(e.to_string()))?;
+
+                let device_id = self.get_device_by_mac(&mac)
+                    .ok_or_else(|| FunctorError::MappingFailed(
+                        format!("Unknown device MAC: {}", mac)
+                    ))?;
+
+                // Restart events result in device reprovisioning
+                Ok(NetworkEvent::DeviceProvisioned {
+                    device_id,
+                    model: vendor_event.get("model")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("unknown")
+                        .to_string(),
+                    firmware_version: vendor_event.get("version")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("unknown")
+                        .to_string(),
                 })
             }
             _ => Err(FunctorError::MappingFailed(format!("Unknown event type: {}", event_type))),
