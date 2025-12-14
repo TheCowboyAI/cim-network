@@ -11,6 +11,9 @@
 //! ### Inventory Adapters (InventoryPort)
 //! - `netbox/` - NetBox DCIM/IPAM
 //!
+//! ### Event Store Adapters (EventStorePort)
+//! - `nats/` - NATS JetStream event sourcing
+//!
 //! ## Kan Extension Integration
 //!
 //! Each adapter implements both:
@@ -23,6 +26,8 @@
 
 pub mod unifi;
 pub mod netbox;
+pub mod nats;
 
 pub use unifi::UniFiAdapter;
 pub use netbox::NetBoxAdapter;
+pub use nats::{NatsEventStore, NatsEventStoreConfig, NatsEventSubscriber, NatsEventAck};

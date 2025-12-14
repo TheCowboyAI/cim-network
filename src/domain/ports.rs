@@ -319,9 +319,48 @@ pub enum IpStatus {
 }
 
 /// Event subscription handle
+///
+/// Represents an active subscription to domain events.
+/// The actual message iteration is done through adapter-specific methods.
 pub struct EventSubscription {
-    // Implementation details hidden
-    _private: (),
+    /// Subscription ID for tracking
+    id: String,
+    /// Subject pattern being subscribed to
+    subject: String,
+}
+
+impl EventSubscription {
+    /// Create a new event subscription
+    pub fn new() -> Self {
+        Self {
+            id: uuid::Uuid::now_v7().to_string(),
+            subject: String::new(),
+        }
+    }
+
+    /// Create with specific subject
+    pub fn with_subject(subject: impl Into<String>) -> Self {
+        Self {
+            id: uuid::Uuid::now_v7().to_string(),
+            subject: subject.into(),
+        }
+    }
+
+    /// Get the subscription ID
+    pub fn id(&self) -> &str {
+        &self.id
+    }
+
+    /// Get the subject pattern
+    pub fn subject(&self) -> &str {
+        &self.subject
+    }
+}
+
+impl Default for EventSubscription {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 use serde::{Deserialize, Serialize};
