@@ -102,6 +102,12 @@ pub use domain::{
     // Functor types
     NetworkFunctor, NetworkKanExtension, VendorExtension, InventoryExtension,
     DomainObject, ExtendedRepresentation, FunctorError,
+    // Infrastructure bridge
+    InfrastructureBridge, BridgeError,
+    device_type_to_compute_type, compute_type_to_device_type,
+    compute_resource_to_network_device,
+    // Infrastructure domain re-export
+    infrastructure,
 };
 
 pub use adapters::{

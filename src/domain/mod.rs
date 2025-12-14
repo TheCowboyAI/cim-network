@@ -64,6 +64,7 @@ pub mod commands;
 pub mod ports;
 pub mod functor;
 pub mod value_objects;
+pub mod infrastructure_bridge;
 
 // Re-exports - explicit to avoid ambiguity
 pub use aggregates::{
@@ -93,3 +94,11 @@ pub use value_objects::{
     DeviceType, PortId, InterfaceConfig, VlanConfig, VlanError,
     ConnectionType, LinkSpeed,
 };
+pub use infrastructure_bridge::{
+    InfrastructureBridge, BridgeError,
+    device_type_to_compute_type, compute_type_to_device_type,
+    compute_resource_to_network_device,
+};
+
+// Re-export infrastructure types for convenience
+pub use cim_domain_infrastructure as infrastructure;
